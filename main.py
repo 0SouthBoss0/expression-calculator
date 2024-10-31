@@ -7,9 +7,12 @@ if __name__ == "__main__":
     model = Model()
     presenter = Presenter(view, model)
 
-    view.init_gui(presenter)
-    view.set_output("calculate>")
-    view.window.mainloop()
+    # view.init_gui(presenter)
+    # view.set_output("calculate>")
+    # view.window.mainloop()
+    in_str = input()
+    print(presenter.input_tokenize(in_str))
+
 # todo: add expression to calculator
 # todo: number buttons for calculator
 # todo: expression parser to calculator
