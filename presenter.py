@@ -1,4 +1,6 @@
-import tkinter
+import math
+
+import numpy as np
 
 from model import Model
 from view import View
@@ -9,9 +11,14 @@ class CalculatorException(Exception):
 
 
 class CalculatorToken:
+    priority_dict = {"+": 1, "-": 1, "/": 2, "*": 2, "^": 3, "~": 4}
+
     def __init__(self, t_type, t_value):
         self.t_type = t_type
         self.t_value = t_value
+
+        if t_type == "Operator":
+            self.t_priority = self.priority_dict[t_value]
 
 
 def save_number_buff(tokenized_input: list, number_buff: str, add_mult=False) -> tuple[list, str]:
@@ -27,8 +34,8 @@ def save_letter_buff(tokenized_input: list, letter_buff: str) -> tuple[list, str
 
 
 def save_constants(tokenized_input: list, letter_buff: str) -> tuple[list, str] | CalculatorException:
-    if letter_buff == "pi":
-        tokenized_input.append(CalculatorToken("Digit", 3.14))
+    if letter_buff == "pi" or letter_buff == "π":
+        tokenized_input.append(CalculatorToken("Digit", np.pi))
     elif letter_buff == "e":
         tokenized_input.append(CalculatorToken("Digit", 2.71))
     else:
@@ -41,29 +48,24 @@ class Presenter:
         self._view = view
         self._model = model
 
-    # def parse_input(self, input_string: str) -> list:
-    #     """
-    #     Parsing calculator input string to list
-    #     :param input_string: string with expression to calculate
-    #     :return: list of parsed input_string into nums and operators
-    #     """
-    #     expression_splitted = []
-    #     buff = ""
-    #     # flag not to split first operation character like minus in "-2"
-    #     first_flag = False
-    #     for item in "".join(input_string.split()):
-    #         if item in list(self._model.operations.keys()) and first_flag:
-    #             if buff:
-    #                 expression_splitted.append(buff)
-    #             expression_splitted.append(item)
-    #             buff = ""
-    #         else:
-    #             buff += item
-    #             first_flag = True
-    #     # saving buff if need
-    #     if buff:
-    #         expression_splitted.append(buff)
-    #     return expression_splitted
+    def evaluate(self, expression):
+        stack = []
+        unary_dict = {"~": lambda a: -a, "sin": lambda a: np.sin(a)}
+        binary_dict = {"+": lambda a, b: a + b, "-": lambda a, b: a - b, "/": lambda a, b: a / b,
+                       "*": lambda a, b: a * b, "^": lambda a, b: a ** b, "log": lambda a, b: math.log(b, a)}
+        for token in expression:
+            print(stack)
+            if token.t_type == "Digit":
+                stack.append(float(token.t_value))
+            else:
+                if token.t_value in binary_dict:
+                    a = stack.pop()
+                    b = stack.pop()
+                    stack.append(binary_dict[token.t_value](b, a))
+                else:
+                    stack.append(unary_dict[token.t_value](stack.pop()))
+
+        return stack.pop()
 
     def input_tokenize(self, input_string: str) -> list:
         tokenized_input = []
@@ -72,8 +74,10 @@ class Presenter:
         number_buffer = ""
         letter_buffer = ""
         try:
-            for symbol in input_string.replace(" ", ""):
+            for i, symbol in enumerate(input_string.replace(" ", "")):
                 if symbol.isdigit():
+                    # if len(tokenized_input) > 0 and tokenized_input[-1].t_type == "CloseBracket":
+                    #     tokenized_input.append(CalculatorToken("Operator", "*"))
                     number_buffer += symbol
 
                 elif symbol.isalpha():
@@ -87,6 +91,11 @@ class Presenter:
 
                     if len(letter_buffer) > 0:
                         tokenized_input, letter_buffer = save_constants(tokenized_input, letter_buffer)
+
+                    # check for unary minus
+                    if symbol == "-" and (
+                            i == 0 or (i > 1 and input_string.replace(" ", "")[i - 1] in operators + ["(", ")"])):
+                        symbol = "~"
                     tokenized_input.append(CalculatorToken("Operator", symbol))
 
                 elif symbol == "(":
@@ -128,6 +137,47 @@ class Presenter:
         print(*[i.t_type for i in tokenized_input], sep=' ')
         print(*[i.t_value for i in tokenized_input], sep='')
         return tokenized_input
+
+    def sort_machine_algo(self, parsed_tokens: list[CalculatorToken]):
+        queue = []
+        stack = []
+        for token in parsed_tokens:
+            print(f"token: {token.t_value}")
+            print("queue:", end=" ")
+            print([item.t_value for item in queue], sep=" ")
+            print("stack:", end=" ")
+            print([item.t_value for item in stack], sep=" ")
+            print()
+            match token.t_type:
+                case "Digit":
+                    queue.append(token)
+
+                case "Function":
+                    stack.append(token)
+
+                case "OpenBracket":
+                    stack.append(token)
+
+                case "CloseBracket":
+                    while stack[-1].t_type != "OpenBracket":
+                        queue.append(stack.pop())
+                    else:
+                        stack.pop()
+                    if len(stack) > 0 and stack[-1].t_type == "Function":
+                        queue.append(stack.pop())
+
+                case "Separator":
+                    while stack[-1].t_type != "OpenBracket":
+                        queue.append(stack.pop())
+
+                case "Operator":
+                    while len(stack) > 0 and stack[-1].t_type == "Operator" and stack[-1].t_priority >= token.t_priority:
+                        queue.append(stack.pop())
+                    stack.append(token)
+
+        while len(stack) > 0:
+            queue.append(stack.pop())
+        return queue
 
     # def check_input(self, parsed_command: list) -> bool:
     #     """
@@ -171,3 +221,9 @@ class Presenter:
     #             self._view.set_output(str(result) + "\n")
     #         except Exception as err:
     #             self._view.display_error(str(err))
+
+    def solve(self, in_str):
+        tokens = self.input_tokenize(in_str)
+        parsed = self.sort_machine_algo(tokens)
+        #print(" ".join([item.t_value for item in parsed]))
+        return self.evaluate(parsed)
