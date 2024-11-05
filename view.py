@@ -16,62 +16,86 @@ class View:
         self.window = tk.Tk()
         self.window.title("Калькулятор")
 
-        # Создаем строку ввода
-        self.entry = tk.Entry(self.window, width=25)
-        self.entry.grid(row=0, column=0, columnspan=4, padx=10, pady=10)
+        # Строка ввода
+        self.entry = tk.Entry(self.window, width=35, font=("arial", 10))
+        self.entry.grid(row=0, column=0, columnspan=3, padx=5, pady=5)
 
-        # Создаем кнопки цифр
-        button_list = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0"]
+        # Кнопка "Вычислить"
+        self.calculate_button = tk.Button(self.window, text="Вычислить", width=15, command=self._presenter.execute)
+        self.calculate_button.grid(row=0, column=3, padx=5, pady=5, columnspan=2)
+
+        # Окно вывода
+        self.result_label = tk.Label(self.window, text="Результат вычисления", width=25, borderwidth=5, bg="#9da1aa")
+        self.result_label.grid(row=0, column=5, columnspan=2, padx=5, pady=5)
+
+        # Цифры
+        button_list = [
+            "7", "8", "9",
+            "4", "5", "6",
+            "1", "2", "3",
+            "0", "."
+        ]
         row = 1
         col = 0
         for button_text in button_list:
-            button = tk.Button(self.window, text=button_text, width=5,
+            button = tk.Button(self.window, text=button_text, width=10,
                                command=lambda text=button_text: self.entry.insert(tk.END, text))
-            button.grid(row=row, column=col, padx=5, pady=5)
+            button.grid(row=row, column=col, padx=2, pady=2)
             col += 1
-            if col == 4:
-                row += 1
+            if col > 2:
                 col = 0
-
-        # Создаем кнопку "Вычислить"
-        self.calculate_button = tk.Button(self.window, text="Вычислить", command=self._presenter.execute)
-        self.calculate_button.grid(row=5, column=0, columnspan=2, padx=10, pady=10)
-
-        # Создаем кнопку "Очистить"
-        self.clear_button = tk.Button(self.window, text="Очистить", command=self.entry.delete, width=5)
-        self.clear_button.grid(row=5, column=2, columnspan=2, padx=10, pady=10)
-
-        # Создаем кнопки тригонометрических функций
-        trig_button_list = ["sin(", "cos(", "tg(", "ctg("]
-        row = 6
-        col = 0
-        for button_text in trig_button_list:
-            button = tk.Button(self.window, text=button_text, width=5,
-                               command=lambda text=button_text: self.entry.insert(tk.END, text))
-            button.grid(row=row, column=col, padx=5, pady=5)
-            col += 1
-            if col == 4:
                 row += 1
-                col = 0
 
-        # Создаем метку для вывода результата
-        self.result_label = tk.Label(self.window, text="", font=("Arial", 16))
-        self.result_label.grid(row=7, column=0, columnspan=5, padx=10, pady=10)
+        # Операции
+        operation_list = [
+            "sin", "tan",
+            "sqrt", "log",
+            "(",
+            "cos", "ctg", "fact",
+            "ln", ")"
+        ]
+        row = 1
+        col = 3
+        for operation_text in operation_list:
+            button = tk.Button(self.window, text=operation_text, width=5,
+                               command=lambda text=operation_text: self.entry.insert(tk.END, text))
+            button.grid(row=row, column=col, padx=2, pady=2)
+            row += 1
+            if row > 5:
+                row = 1
+                col += 1
 
-        # Создаем кнопки арифметических операций
-        button_list = ["+", "-", "*", "/", "^", "%"]
+        # Backspace и Clear
+        button = tk.Button(self.window, text="Backspace", width=10,
+                           command=lambda: self.entry.delete(self.entry.index(tkinter.END) - 1))
+        button.grid(row=1, column=5, padx=2, pady=2, )
+
+        button = tk.Button(self.window, text="Clear", width=10,
+                           command=lambda: self.entry.delete(0, tkinter.END))
+        button.grid(row=1, column=6, padx=2, pady=2)
+
+        # Арифметические операции
+        arith_list = [
+            "+", "-",
+            "*", "/",
+            "^", "%",
+            "!", ","
+        ]
         row = 2
-        col = 4
-        for button_text in button_list:
-            button = tk.Button(self.window, text=button_text, width=5,
-                               command=lambda text=button_text: self.entry.insert(tk.END, text))
-            button.grid(row=row, column=col, padx=5, pady=5)
-            col += 1
-            if col == 8:
-                row += 1
-                col = 4
+        col = 5
+        for arith_text in arith_list:
+            button = tk.Button(self.window, text=arith_text, width=10,
+                               command=lambda text=arith_text: self.entry.insert(tk.END, text))
+            button.grid(row=row, column=col, padx=2, pady=2)
+            row += 1
+            if row > 5:
+                col += 1
+                row = 2
 
         self.window.resizable(False, False)
+
+    # def append_text(self, text):
+    #     self.entry.insert(tk.END, text)
 
     def set_output(self, output):
         self.result_label.config(text=output)
