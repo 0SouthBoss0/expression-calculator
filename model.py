@@ -8,7 +8,7 @@ class CalculatorException(Exception):
 
 
 class CalculatorToken:
-    priority_dict = {"+": 1, "-": 1, "/": 2, "*": 2, "^": 3, "~": 4}
+    priority_dict = {"+": 1, "-": 1, "%": 1, "/": 2, "*": 2, "^": 3, "~": 4}
 
     def __init__(self, t_type, t_value):
         self.t_type = t_type
@@ -47,7 +47,6 @@ def factorial_check(a):
         raise CalculatorException("factorial not int error")
 
 
-
 class Model:
     def __init__(self):
         pass
@@ -60,7 +59,7 @@ class Model:
                       "!": factorial_check}
         binary_dict = {"+": lambda a, b: a + b, "-": lambda a, b: a - b, "/": lambda a, b: a / b,
                        "*": lambda a, b: a * b, "^": lambda a, b: a ** b, "log": lambda a, b: math.log(b, a),
-                       "min": lambda a, b: min(a, b), "max": lambda a, b: max(a, b)}
+                       "min": lambda a, b: min(a, b), "max": lambda a, b: max(a, b), "%": lambda a, b: a % b}
         for token in expression:
             if token.t_type == "Digit":
                 stack.append(float(token.t_value))
@@ -212,5 +211,3 @@ class Model:
             else:
                 queue.append(temp)
         return queue
-
-
