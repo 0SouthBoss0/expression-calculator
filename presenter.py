@@ -20,7 +20,7 @@ class Presenter:
         try:
             tokens = self._model.input_tokenize(input_string)
             parsed = self._model.sort_machine_algo(tokens)
-            print("Reverse Polish Notation: " + " ".join([str(item.t_value) for item in parsed]))
+            #print("Reverse Polish Notation: " + " ".join([str(item.t_value) for item in parsed]))
             result = self._model.evaluate(parsed)
             self._view.set_output(str(result))
         except CalculatorException as err:

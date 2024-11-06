@@ -20,6 +20,9 @@ class View:
         self.entry = tk.Entry(self.window, width=35, font=("arial", 10))
         self.entry.grid(row=0, column=0, columnspan=3, padx=5, pady=5)
 
+        # обработка нажатия enter
+        self.entry.bind("<Return>", lambda e: self._presenter.execute())
+
         # Кнопка "Вычислить"
         self.calculate_button = tk.Button(self.window, text="Вычислить", width=15, command=self._presenter.execute)
         self.calculate_button.grid(row=0, column=3, padx=5, pady=5, columnspan=2)
@@ -51,7 +54,7 @@ class View:
             "sin", "tan",
             "sqrt", "log",
             "(",
-            "cos", "ctg", "fact",
+            "cos", "cot", "fact",
             "ln", ")"
         ]
         row = 1
@@ -93,9 +96,6 @@ class View:
                 row = 2
 
         self.window.resizable(False, False)
-
-    # def append_text(self, text):
-    #     self.entry.insert(tk.END, text)
 
     def set_output(self, output):
         self.result_label.config(text=output)

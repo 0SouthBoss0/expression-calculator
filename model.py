@@ -17,6 +17,9 @@ class CalculatorToken:
         if t_type == "Operator":
             self.t_priority = self.priority_dict[t_value]
 
+    def __eq__(self, other):
+        return self.t_type == other.t_type and self.t_value == other.t_value
+
 
 def save_number_buff(tokenized_input: list, number_buff: str, add_mult=False) -> tuple[list, str]:
     tokenized_input.append(CalculatorToken("Digit", number_buff))
@@ -51,7 +54,7 @@ class Model:
     def __init__(self):
         pass
 
-    def evaluate(self, expression):
+    def evaluate(self, expression: list[CalculatorToken]):
         stack = []
         unary_dict = {"~": lambda a: -a, "sin": lambda a: np.sin(a), "cos": lambda a: np.cos(a),
                       "tan": lambda a: np.tan(a), "cot": lambda a: 1 / np.tan(a), "sqrt": lambda a: math.sqrt(a),
@@ -195,9 +198,12 @@ class Model:
                             f"в выражении либо неверно поставлен разделитель, либо не согласованы скобки - {err}")
 
                 case "Separator":
-                    while stack[-1].t_type != "OpenBracket":
-                        queue.append(stack.pop())
-
+                    try:
+                        while stack[-1].t_type != "OpenBracket":
+                            queue.append(stack.pop())
+                    except IndexError as err:
+                        raise CalculatorException(
+                            f"Проблема с разделителем - вероятно, использована десятичная запятая вместо точки!")
                 case "Operator":
                     while len(stack) > 0 and stack[-1].t_type == "Operator" and stack[
                         -1].t_priority >= token.t_priority:
