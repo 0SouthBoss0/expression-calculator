@@ -11,6 +11,4 @@ if __name__ == "__main__":
     view.window.mainloop()
 
 
-# todo: user-friendly errors
-# todo: test handling
 # todo: lab 4
