@@ -37,7 +37,7 @@ def save_constants(tokenized_input: list, letter_buff: str) -> tuple[list, str] 
     if letter_buff == "pi" or letter_buff == "π":
         tokenized_input.append(CalculatorToken("Digit", np.pi))
     elif letter_buff == "e":
-        tokenized_input.append(CalculatorToken("Digit", 2.71))
+        tokenized_input.append(CalculatorToken("Digit", np.e))
     else:
         raise CalculatorException(f"invalid value: {letter_buff}")
     return tokenized_input, ""

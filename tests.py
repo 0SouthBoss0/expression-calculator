@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch, MagicMock, Mock, call
 
+import numpy as np
+
 from model import Model
 from presenter import Presenter
 from view import View
@@ -12,16 +14,73 @@ class TestModel(unittest.TestCase):
     def setUp(self) -> None:
         self.model = Model()
 
-    def test_input_tokenize(self):
-        self.assertEqual(self.model.input_tokenize("2+2"),
+    def test_input_tokenize_sum2(self):
+        self.assertEqual(self.model.input_tokenize("2+3"),
                          [CalculatorToken("Digit", "2"), CalculatorToken("Operator", "+"),
-                          CalculatorToken("Digit", "2")])
+                          CalculatorToken("Digit", "3")])
 
-    def test_sort_machine_algo(self):
+    def test_input_tokenize_sum3(self):
+        self.assertEqual(self.model.input_tokenize("2+3+4"),
+                         [CalculatorToken("Digit", "2"), CalculatorToken("Operator", "+"),
+                          CalculatorToken("Digit", "3"), CalculatorToken("Operator", "+"),
+                          CalculatorToken("Digit", "4")])
+
+    def test_input_tokenize_with_brackets(self):
+        self.assertEqual(self.model.input_tokenize("2+(3+(4+5))"),
+                         [CalculatorToken("Digit", "2"), CalculatorToken("Operator", "+"),
+                          CalculatorToken("OpenBracket", "("), CalculatorToken("Digit", "3"),
+                          CalculatorToken("Operator", "+"), CalculatorToken("OpenBracket", "("),
+                          CalculatorToken("Digit", "4"), CalculatorToken("Operator", "+"),
+                          CalculatorToken("Digit", "5"), CalculatorToken("CloseBracket", ")"),
+                          CalculatorToken("CloseBracket", ")")])
+
+    def test_input_tokenize_with_functions_and_constants(self):
+        self.assertEqual(self.model.input_tokenize("0.1+sin(pi)-log(2, 64)"),
+                         [CalculatorToken("Digit", "0.1"), CalculatorToken("Operator", "+"),
+                          CalculatorToken("Function", "sin"), CalculatorToken("OpenBracket", "("),
+                          CalculatorToken("Digit", np.pi), CalculatorToken("CloseBracket", ")"),
+                          CalculatorToken("Operator", "-"), CalculatorToken("Function", "log"),
+                          CalculatorToken("OpenBracket", "("), CalculatorToken("Digit", "2"),
+                          CalculatorToken("Separator", ","), CalculatorToken("Digit", "64"),
+                          CalculatorToken("CloseBracket", ")")])
+
+    def test_input_tokenize_with_brackets_and_ignored_mult(self):
+        self.assertEqual(self.model.input_tokenize("2+(3+4(5+6))"),
+                         [CalculatorToken("Digit", "2"), CalculatorToken("Operator", "+"),
+                          CalculatorToken("OpenBracket", "("), CalculatorToken("Digit", "3"),
+                          CalculatorToken("Operator", "+"), CalculatorToken("Digit", "4"),
+                          CalculatorToken("Operator", "*"), CalculatorToken("OpenBracket", "("),
+                          CalculatorToken("Digit", "5"), CalculatorToken("Operator", "+"),
+                          CalculatorToken("Digit", "6"), CalculatorToken("CloseBracket", ")"),
+                          CalculatorToken("CloseBracket", ")")])
+
+    def test_sort_machine_algo_sum2(self):
         self.assertEqual(self.model.sort_machine_algo(
-            [CalculatorToken("Digit", "2"), CalculatorToken("Operator", "+"), CalculatorToken("Digit", "2")]),
-            [CalculatorToken("Digit", "2"), CalculatorToken("Digit", "2"),
+            [CalculatorToken("Digit", "2"), CalculatorToken("Operator", "+"), CalculatorToken("Digit", "3")]),
+            [CalculatorToken("Digit", "2"), CalculatorToken("Digit", "3"),
              CalculatorToken("Operator", "+")])
+
+    def test_sort_machine_algo_sum3(self):
+        self.assertEqual(self.model.sort_machine_algo(
+            [CalculatorToken("Digit", "2"), CalculatorToken("Operator", "+"), CalculatorToken("Digit", "3"),
+             CalculatorToken("Operator", "+"), CalculatorToken("Digit", "4")]),
+            [CalculatorToken("Digit", "2"), CalculatorToken("Digit", "3"),
+             CalculatorToken("Operator", "+"), CalculatorToken("Digit", "4"), CalculatorToken("Operator", "+")])
+
+    def test_sort_machine_algo_with_brackets_and_ignored_mult(self):
+        self.assertEqual(self.model.sort_machine_algo(
+            [CalculatorToken("Digit", "2"), CalculatorToken("Operator", "+"),
+             CalculatorToken("OpenBracket", "("), CalculatorToken("Digit", "3"),
+             CalculatorToken("Operator", "+"), CalculatorToken("Digit", "4"),
+             CalculatorToken("Operator", "*"), CalculatorToken("OpenBracket", "("),
+             CalculatorToken("Digit", "5"), CalculatorToken("Operator", "+"),
+             CalculatorToken("Digit", "6"), CalculatorToken("CloseBracket", ")"),
+             CalculatorToken("CloseBracket", ")")]),
+
+            [CalculatorToken("Digit", "2"), CalculatorToken("Digit", "3"), CalculatorToken("Digit", "4"),
+             CalculatorToken("Digit", "5"), CalculatorToken("Digit", "6"),
+             CalculatorToken("Operator", "+"), CalculatorToken("Operator", "*"),
+             CalculatorToken("Operator", "+"), CalculatorToken("Operator", "+"), ])
 
     def test_evaluate(self):
         self.assertEqual(self.model.evaluate([CalculatorToken("Digit", "2"), CalculatorToken("Digit", "2"),

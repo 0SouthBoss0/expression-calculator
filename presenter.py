@@ -1,5 +1,3 @@
-import tkinter
-
 from model import Model, CalculatorException
 from view import View
 
