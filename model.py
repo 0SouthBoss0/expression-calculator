@@ -22,6 +22,10 @@ class CalculatorToken:
 
 
 def save_number_buff(tokenized_input: list, number_buff: str, add_mult=False) -> tuple[list, str]:
+    try:
+        float(number_buff)
+    except ValueError:
+        raise CalculatorException(f"Некорректное число {number_buff} !")
     tokenized_input.append(CalculatorToken("Digit", number_buff))
     if add_mult:
         tokenized_input.append(CalculatorToken("Operator", "*"))
@@ -39,7 +43,7 @@ def save_constants(tokenized_input: list, letter_buff: str) -> tuple[list, str] 
     elif letter_buff == "e":
         tokenized_input.append(CalculatorToken("Digit", np.e))
     else:
-        raise CalculatorException(f"invalid value: {letter_buff}")
+        raise CalculatorException(f"Некорректное значение: {letter_buff}")
     return tokenized_input, ""
 
 
@@ -47,7 +51,7 @@ def factorial_check(a):
     if a.is_integer():
         return math.factorial(int(a))
     else:
-        raise CalculatorException("factorial not int error")
+        raise CalculatorException("Невозможно вычислить факториал нецелого числа!")
 
 
 class Model:
@@ -72,21 +76,26 @@ class Model:
                         a = stack.pop()
                         b = stack.pop()
                     except IndexError as err:
-                        raise CalculatorException(f"exception with expression - {err}")
+                        raise CalculatorException(
+                            f"Некорректное выражение. Проверьте корректность использования {token.t_value} !")
                     try:
                         stack.append(binary_dict[token.t_value](b, a))
+                    except KeyError as err:
+                        raise CalculatorException(f"Функции {token.t_value} не существует!")
                     except Exception as err:
-                        raise CalculatorException(f"exception while calculation - {err}")
+                        raise CalculatorException(f"Ошибка во время вычисления {token.t_value} !")
                 else:
                     try:
                         stack.append(unary_dict[token.t_value](stack.pop()))
+                    except KeyError as err:
+                        raise CalculatorException(f"Функции {token.t_value} не существует!")
                     except Exception as err:
-                        raise CalculatorException(f"exception while calc - {err}")
+                        raise CalculatorException(f"Ошибка во время вычисления {token.t_value} !")
 
         try:
             return stack.pop()
         except Exception as err:
-            raise CalculatorException(f"exception with expression - {err}")
+            raise CalculatorException(f"Некорректное выражение!")
 
     def input_tokenize(self, input_string: str) -> list:
         tokenized_input = []
@@ -149,15 +158,14 @@ class Model:
                         tokenized_input, letter_buffer = save_constants(tokenized_input, letter_buffer)
                     tokenized_input.append(CalculatorToken("Separator", symbol))
                 else:
-                    raise CalculatorException(f'incorrect symbol - {symbol}')
+                    raise CalculatorException(f'Некорректный символ в выражении - {symbol}')
 
             if len(number_buffer) > 0:
                 tokenized_input, number_buffer = save_number_buff(tokenized_input, number_buffer)
             if len(letter_buffer) > 0:
                 tokenized_input, letter_buffer = save_constants(tokenized_input, letter_buffer)
         except CalculatorException as e:
-            print(f'exception: {e}')
-            return []
+            raise CalculatorException(f'Ошибка во время токенизации: {e}')
         # print(*[i.t_type for i in tokenized_input], sep=' ')
         # print(*[i.t_value for i in tokenized_input], sep='')
         return tokenized_input
@@ -195,7 +203,7 @@ class Model:
                             queue.append(stack.pop())
                     except IndexError as err:
                         raise CalculatorException(
-                            f"в выражении либо неверно поставлен разделитель, либо не согласованы скобки - {err}")
+                            f"В выражении либо неверно поставлен разделитель, либо не согласованы скобки!")
 
                 case "Separator":
                     try:
