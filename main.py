@@ -10,5 +10,4 @@ if __name__ == "__main__":
     view.init_gui(presenter)
     view.window.mainloop()
 
-
 # todo: lab 4
