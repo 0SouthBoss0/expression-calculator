@@ -4,8 +4,8 @@ from unittest.mock import patch, MagicMock, Mock, call
 import numpy as np
 
 from model import Model
-from presenter import Presenter
 from view import View
+from presenter import Presenter
 from model import CalculatorToken
 from model import CalculatorException
 

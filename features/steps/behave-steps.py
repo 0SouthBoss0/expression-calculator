@@ -20,6 +20,6 @@ def step_impl(context, text):
     assert context.view.result_label.cget("text") == text
 
 
-@then('we will get error with "{text}" message')
+@then('we will get "{text}" exception')
 def step_impl(context, text):
     context.view.display_error.assert_called_once_with(text)

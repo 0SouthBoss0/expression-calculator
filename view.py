@@ -11,6 +11,10 @@ class View:
         self._presenter = None
 
     def init_gui(self, presenter):
+        """
+        Function to init interface
+        :param presenter: Presenter object linked to this object
+        """
         self._presenter = presenter
         # Создаем главное окно
         self.window = tk.Tk()

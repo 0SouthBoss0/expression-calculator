@@ -19,3 +19,4 @@ def before_all(context):
 
 def after_scenario(context, scenario):
     context.view.entry.delete(0, tk.END)
+    context.view.display_error = MagicMock()
