@@ -162,7 +162,7 @@ class TestModel(unittest.TestCase):
     def test_evaluate_incorrect_expression_exception(self):
         with self.assertRaises(CalculatorException) as exc:
             self.model.evaluate([CalculatorToken("Digit", "2"), CalculatorToken("Operator", "+")])
-        self.assertEqual(str(exc.exception), "Некорректное выражение. Проверьте корректность использования + !")
+        self.assertEqual(str(exc.exception), "Недостаточно операндов для оператора +!")
 
     def test_evaluate_divizion_zero_exception(self):
         with self.assertRaises(CalculatorException) as exc:

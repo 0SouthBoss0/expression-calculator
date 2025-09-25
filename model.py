@@ -1,5 +1,4 @@
 import math
-
 import numpy as np
 
 
@@ -8,7 +7,7 @@ class CalculatorException(Exception):
 
 
 class CalculatorToken:
-    priority_dict = {"+": 1, "-": 1, "%": 1, "/": 2, "*": 2, "^": 3, "~": 4}
+    priority_dict = {"+": 1, "-": 1, "%": 4, "/": 2, "*": 2, "^": 3, "~": 4}
 
     def __init__(self, t_type, t_value):
         self.t_type = t_type
@@ -98,6 +97,12 @@ class Model:
                        "*": lambda a, b: a * b, "^": lambda a, b: a ** b, "log": lambda a, b: math.log(b, a),
                        "min": lambda a, b: min(a, b), "max": lambda a, b: max(a, b), "%": lambda a, b: a % b}
 
+        # Функции с фиксированным количеством аргументов
+        function_arg_count = {
+            "log": 2, "min": 2, "max": 2,
+            "sin": 1, "cos": 1, "tan": 1, "cot": 1, "sqrt": 1, "ln": 1, "fact": 1, "!": 1
+        }
+
         for token in expression:
             if token.t_type == "Digit":
                 # token is a digit -> push to stack
@@ -105,31 +110,35 @@ class Model:
             else:
                 if token.t_value in binary_dict:
                     # token is a binary operator or function
-                    try:
-                        a = stack.pop()
-                        b = stack.pop()
-                    except IndexError as err:
+                    if len(stack) < 2:
                         raise CalculatorException(
-                            f"Некорректное выражение. Проверьте корректность использования {token.t_value} !")
+                            f"Недостаточно операндов для оператора {token.t_value}!")
+
+                    a = stack.pop()
+                    b = stack.pop()
+
                     try:
                         stack.append(binary_dict[token.t_value](b, a))
-                    except KeyError as err:
-                        raise CalculatorException(f"Функции {token.t_value} не существует!")
-                    except Exception as err:
-                        raise CalculatorException(f"Ошибка во время вычисления {token.t_value} !")
-                else:
-                    # token is a unary operator or function
-                    try:
-                        stack.append(unary_dict[token.t_value](stack.pop()))
-                    except KeyError as err:
-                        raise CalculatorException(f"Функции {token.t_value} не существует!")
                     except Exception as err:
                         raise CalculatorException(f"Ошибка во время вычисления {token.t_value} !")
 
-        try:
-            return stack.pop()
-        except Exception as err:
-            raise CalculatorException(f"Некорректное выражение!")
+                elif token.t_value in unary_dict:
+                    # token is a unary operator or function
+                    if len(stack) < 1:
+                        raise CalculatorException(
+                            f"Недостаточно операндов для функции {token.t_value}!")
+
+                    try:
+                        stack.append(unary_dict[token.t_value](stack.pop()))
+                    except Exception as err:
+                        raise CalculatorException(f"Ошибка во время вычисления {token.t_value} !")
+                else:
+                    raise CalculatorException(f"Неизвестный оператор или функция: {token.t_value}")
+
+        if len(stack) != 1:
+            raise CalculatorException("Некорректное выражение!")
+
+        return stack.pop()
 
     def input_tokenize(self, input_string: str) -> list:
         """
@@ -141,10 +150,16 @@ class Model:
         tokenized_input = []
         operators = ["+", "-", "*", "/", "%", "^"]
 
+        # Проверка на пустую строку
+        if not input_string.strip():
+            raise CalculatorException("Пустое выражение!")
+
         number_buffer = ""
         letter_buffer = ""
+        input_clean = input_string.replace(" ", "")
+
         try:
-            for i, symbol in enumerate(input_string.replace(" ", "")):
+            for i, symbol in enumerate(input_clean):
                 if symbol.isdigit():
                     # if symbol is a digit -> send symbol to number buffer
                     number_buffer += symbol
@@ -159,6 +174,8 @@ class Model:
                     # checking for postfix factorial function
                     if len(number_buffer) > 0:
                         tokenized_input, number_buffer = save_number_buff(tokenized_input, number_buffer)
+                    if len(letter_buffer) > 0:
+                        tokenized_input, letter_buffer = save_letter_buff(tokenized_input, letter_buffer)
                     tokenized_input.append(CalculatorToken("Function", symbol))
 
                 elif symbol in operators:
@@ -168,23 +185,35 @@ class Model:
                     if len(letter_buffer) > 0:
                         tokenized_input, letter_buffer = save_constants(tokenized_input, letter_buffer)
 
-                    # checking if minus is unary minus -> if it is a first char or previous token is OpenBracket
-                    if symbol == "-" and (
-                            i == 0 or (i > 1 and input_string.replace(" ", "")[i - 1] in operators + ["("])):
+                    # Проверка на множественные операторы (кроме унарного минуса в начале)
+                    if i > 0 and input_clean[i - 1] in operators + ["("] and symbol != "-":
+                        raise CalculatorException(f"Некорректная последовательность операторов!")
+                    if symbol == "-" and i > 0 and input_clean[i - 1] == "-":
+                        raise CalculatorException("Некорректная последовательность операторов!")
+                    # checking if minus is unary minus -> if it is a first char or previous token is operator or OpenBracket
+                    if symbol == "-" and (i == 0 or (i > 0 and input_clean[i - 1] in operators + ["("])):
                         symbol = "~"
                     tokenized_input.append(CalculatorToken("Operator", symbol))
 
                 elif symbol == "(":
                     # if symbol is a OpenBracket -> save letter buffer and number buffer
-                    if len(tokenized_input) > 0 and tokenized_input[-1].t_type == "CloseBracket":
-                        # checking for ignored multiply operator in construction as (1+2)(3+4)
-                        tokenized_input.append(CalculatorToken("Operator", "*"))
+                    # Проверка на неявное умножение: число( или )( или функция(
+                    if len(tokenized_input) > 0:
+                        last_token = tokenized_input[-1]
+                        if (last_token.t_type == "Digit" or
+                                last_token.t_type == "CloseBracket" or
+                                (last_token.t_type == "Function" and last_token.t_value != "!")):
+                            tokenized_input.append(CalculatorToken("Operator", "*"))
 
                     if len(letter_buffer) > 0:
                         tokenized_input, letter_buffer = save_letter_buff(tokenized_input, letter_buffer)
-
                     elif len(number_buffer) > 0:
                         tokenized_input, number_buffer = save_number_buff(tokenized_input, number_buffer, add_mult=True)
+
+                    # Проверка на некорректные последовательности типа "(,"
+                    if i > 0 and input_clean[i - 1] == ",":
+                        raise CalculatorException("Некорректное использование запятой перед открывающей скобкой!")
+
                     tokenized_input.append(CalculatorToken("OpenBracket", symbol))
 
                 elif symbol == ")":
@@ -193,10 +222,24 @@ class Model:
                         tokenized_input, number_buffer = save_number_buff(tokenized_input, number_buffer)
                     if len(letter_buffer) > 0:
                         tokenized_input, letter_buffer = save_constants(tokenized_input, letter_buffer)
+
+                    # Проверка на пустые скобки ()
+                    if (len(tokenized_input) > 0 and tokenized_input[-1].t_type == "OpenBracket"):
+                        raise CalculatorException("Пустые скобки!")
+
                     tokenized_input.append(CalculatorToken("CloseBracket", symbol))
+
+                    # Проверка на неявное умножение: )( или )число
+                    if i < len(input_clean) - 1 and (input_clean[i + 1].isdigit() or
+                                                     input_clean[i + 1] == "(" or
+                                                     input_clean[i + 1].isalpha()):
+                        tokenized_input.append(CalculatorToken("Operator", "*"))
 
                 elif symbol == ".":
                     # if symbol is a decimal point -> send symbol to number buffer
+                    # Проверка на множественные точки в числе
+                    if "." in number_buffer:
+                        raise CalculatorException(f"Некорректное число!")
                     number_buffer += "."
 
                 elif symbol == ",":
@@ -205,6 +248,13 @@ class Model:
                         tokenized_input, number_buffer = save_number_buff(tokenized_input, number_buffer)
                     if len(letter_buffer) > 0:
                         tokenized_input, letter_buffer = save_constants(tokenized_input, letter_buffer)
+
+                    # Проверка на некорректное использование запятой
+                    if (i == 0 or i == len(input_clean) - 1 or
+                            input_clean[i - 1] in operators + ["("] or
+                            input_clean[i + 1] in operators + [")", ","]):
+                        raise CalculatorException("Некорректное использование запятой!")
+
                     tokenized_input.append(CalculatorToken("Separator", symbol))
                 else:
                     raise CalculatorException(f'Некорректный символ в выражении - {symbol}')
@@ -215,6 +265,12 @@ class Model:
             # after-saving letter buffer
             if len(letter_buffer) > 0:
                 tokenized_input, letter_buffer = save_constants(tokenized_input, letter_buffer)
+
+            # Проверка на некорректное окончание выражения
+            if (len(tokenized_input) > 0 and
+                    tokenized_input[-1].t_type in ["Operator", "Separator"]):
+                raise CalculatorException("Выражение не может заканчиваться оператором или разделителем!")
+
         except CalculatorException as e:
             raise CalculatorException(f'Ошибка во время токенизации: {e}')
         return tokenized_input
@@ -229,6 +285,21 @@ class Model:
         """
         queue = []
         stack = []
+
+        # Счетчик скобок для проверки сбалансированности
+        bracket_count = 0
+
+        for token in parsed_tokens:
+            if token.t_type == "OpenBracket":
+                bracket_count += 1
+            elif token.t_type == "CloseBracket":
+                bracket_count -= 1
+                if bracket_count < 0:
+                    raise CalculatorException("В выражении не согласованы скобки!")
+
+        if bracket_count != 0:
+            raise CalculatorException("В выражении не согласованы скобки!")
+
         for token in parsed_tokens:
             match token.t_type:
                 case "Digit":
@@ -290,9 +361,9 @@ class Model:
         while len(stack) > 0:
             # while there are tokens on the operator stack
             temp = stack.pop()
-            if temp.t_type != "Operator":
+            if temp.t_type == "OpenBracket" or temp.t_type == "CloseBracket":
                 # there are mismatched parentheses
-                raise CalculatorException("в выражении не согласованы скобки")
+                raise CalculatorException("В выражении не согласованы скобки")
             else:
                 #  pop the operator from the operator stack onto the output queue
                 queue.append(temp)
